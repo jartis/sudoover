@@ -86,6 +86,8 @@ $(function () {
         ],
     ];
 
+    let isOrig = [];
+
     let locked = [];
     let error = [];
     let histo = [
@@ -153,6 +155,14 @@ $(function () {
             shufflePuzzle();
         }
 
+        // Mark originals
+        for (let i = 0; i < 81; i++) {
+            isOrig[i] = false;
+            if (board[i] > 0) {
+                isOrig[i] = true;
+            }
+        }
+
         loadImages(); // Set source path
 
         // Init trackers
@@ -176,18 +186,29 @@ $(function () {
         }
         if (e.keyCode >= 49 && e.keyCode <= 57) { // 1-9
             if (highlightState == 1) { // Cell highlighted
+                if (isOrig[(9 * sy) + sx]) {
+                    return;
+                }
                 board[(9 * sy) + sx] = e.keyCode - 48;
+                lastCell = (9 * sy) + sx;
                 checkBoard(true);
             }
         }
         if (e.keyCode >= 97 && e.keyCode <= 105) { // Numpad 1-9
             if (highlightState == 1) {
+                if (isOrig[(9 * sy) + sx]) {
+                    return;
+                }
                 board[(9 * sy) + sx] = e.keyCode - 96;
+                lastCell = (9 * sy) + sx;
                 checkBoard(true);
             }
         }
         if (e.keyCode == 46 || e.keyCode == 8) { // Delete or backspace
             if (highlightState == 1) {
+                if (isOrig[(9 * sy) + sx]) {
+                    return;
+                }
                 board[(9 * sy) + sx] = 0;
                 checkBoard(false);
             }
@@ -242,6 +263,9 @@ $(function () {
                     return; // Nothin' else to do here, we selected a cell
                 }
             } else {
+                if (isOrig[(9 * cellY) + cellX]) {
+                    return;
+                }
                 board[(9 * cellY) + cellX] = (numbut);
                 lastCell = (9 * cellY) + cellX;
 
@@ -270,6 +294,9 @@ $(function () {
                         btnState[whichnum] = 2;
                         numbut = 0;
                     } else { // Cell highlighted, fill cell
+                        if (isOrig[(9 * sy) + sx]) {
+                            return;
+                        }
                         board[(9 * sy) + sx] = 0;
                         checkBoard(false);
                     }
@@ -283,6 +310,10 @@ $(function () {
                             btnState[whichnum] = 2;
                             numbut = whichnum + 1;
                         } else { // Cell highlighted, fill cell
+                            if (isOrig[(9 * sy) + sx]) {
+                                return;
+                            }
+
                             board[(9 * sy) + sx] = whichnum + 1;
                             lastCell = (9 * sy) + sx;
                             checkBoard(true);
@@ -330,14 +361,18 @@ $(function () {
             let start = Math.floor(Math.random() * 81);
             for (let i = 0; i < 27; i++) {
                 let cell = (start + i) % 81;
-                if (cell % 2 == 0) { // Gotta protect a few arbitrarily
+                if (Math.random() < 0.5) { // Gotta protect a few arbitrarily
                     continue;
                 }
                 if (safeCells.includes(cell)) { // And all the centers are safe
                     continue;
                 }
                 if (board[cell] > 0 && !locked[cell] && cell != lastCell) {
-                    board[cell] = 0;
+                    if (isOrig[cell]) {
+                        isOrig[cell] = false;
+                    } else {
+                        board[cell] = 0;
+                    }
                     return;
                 }
             }
@@ -395,7 +430,7 @@ $(function () {
                     if (locked[cell]) {
                         ctx.drawImage(numbersImg, 600, 0, 60, 60, 30 + (60 * x), 30 + (60 * y), 60, 60);
                     }
-                    ctx.drawImage(numbersImg, 60 * board[cell], 0, 60, 60, 30 + (60 * x), 30 + (60 * y), 60, 60);
+                    ctx.drawImage(numbersImg, 60 * board[cell], isOrig[cell] ? 180 : 0, 60, 60, 30 + (60 * x), 30 + (60 * y), 60, 60);
                     if (showErrors && error[cell]) {
                         ctx.drawImage(numbersImg, 660, 0, 60, 60, 30 + (60 * x), 30 + (60 * y), 60, 60);
                     }
@@ -412,7 +447,7 @@ $(function () {
             let hsrcx = (60 * (9 - histo[num]));
             ctx.drawImage(buttonImg, 0, bsrcy, 60, 60, tx, ty, 60, 60);
             ctx.drawImage(numbersImg, srcx, (60 * (Math.floor(btnState[num] / 3))), 60, 60, tx + 5, ty + 2, 50, 50);
-            if (num < 9 && histo[num] > 0) {
+            if (num < 9 && histo[num] < 9) {
                 ctx.drawImage(numbersImg, hsrcx, 120, 60, 60, tx, ty, 60, 60);
             }
         }
