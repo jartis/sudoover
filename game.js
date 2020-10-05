@@ -208,7 +208,9 @@ $(function () {
         sy = -1;
 
         let b = Math.floor(Math.random() * baseBoards.length);
-        board = baseBoards.slice(b,1);
+        for (let i = 0; i < 81; i++) {
+            board[i] = baseBoards[b][i];
+        }
 
         for (let i = 0; i < 25; i++) {
             shufflePuzzle();
