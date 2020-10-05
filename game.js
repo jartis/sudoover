@@ -114,7 +114,7 @@ $(function () {
     var numbersImg;
     var buttonImg;
     var winImg;
-    var titleImg
+    var titleImg;
 
     var btnState = [
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -208,7 +208,7 @@ $(function () {
         sy = -1;
 
         let b = Math.floor(Math.random() * baseBoards.length);
-        board = baseBoards[b];
+        board = baseBoards.slice(b,1);
 
         for (let i = 0; i < 25; i++) {
             shufflePuzzle();
