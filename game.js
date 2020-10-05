@@ -7,7 +7,7 @@ $(function () {
     var dstctx;
     var newGameWidth;
     var newGameHeight;
-    const dscale = 4/3;
+    const dscale = 4 / 3;
 
     let board = [];
 
@@ -205,7 +205,7 @@ $(function () {
         $(window).on('resize', resizeGame);
     }
 
-    function resizeGame (e) {
+    function resizeGame(e) {
         dstCanvas.width = window.innerWidth;
         dstCanvas.height = window.innerHeight;
 
@@ -508,7 +508,8 @@ $(function () {
         // numbersImg[11] = rong
 
         // Scale to the big one!
-        dstctx.clearRect(0,0,dstCanvas.width,dstCanvas.height);
+        dstctx.fillStyle = "black";
+        dstctx.fillRect(0, 0, dstCanvas.width, dstCanvas.height);
 
         dstctx.drawImage(srcCanvas, 0, 0, 800, 600, screenOffsetX, screenOffsetY, newGameWidth, newGameHeight);
 
