@@ -10,6 +10,7 @@ $(function () {
     const dscale = 4 / 3;
 
     let board = [];
+    let rot = 0;
 
     // Boards and vars
     let baseBoards = [
@@ -100,7 +101,7 @@ $(function () {
         0, 0, 0, 0, 0, 0, 0, 0, 0,
     ];
 
-    let safeCells = [
+    const safeCells = [
         10, 13, 16,
         37, 40, 43,
         64, 67, 70
@@ -112,6 +113,8 @@ $(function () {
     var gridImg;
     var numbersImg;
     var buttonImg;
+    var winImg;
+    var titleImg
 
     var btnState = [
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -146,29 +149,63 @@ $(function () {
     var screenOffsetY = 0;
     let gscale = 1;
 
+    var freshload = true;
+    var youwon = false;
+
     var imgReady = {
         grid: false,
         numbers: false,
         buttons: false,
-        allready: function () {
-            return this.grid &&
-                this.numbers &&
-                this.buttons;
-        }
+        youwin: false,
+        title: false,
     };
 
-    function initGame() {
-
+    function firstInit() {
         // Set up canvaseses
         dstCanvas = document.getElementById('canvas');
         dstctx = dstCanvas.getContext('2d');
         dstctx.canvas.width = window.innerWidth;
         dstctx.canvas.height = window.innerHeight;
+        dstctx.fillStyle = "black";
+        dstctx.fillRect(0, 0, dstCanvas.width, dstCanvas.height);
+
         srcCanvas = document.createElement('canvas');
         srcCanvas.width = 800;
         srcCanvas.height = 800;
         srcctx = srcCanvas.getContext('2d');
 
+        loadImages(); // Set source path
+        resizeGame();
+
+        setInterval(update, 40);
+        drawScreen();
+        checkBoard(false);
+
+        $('#canvas').on('click', clickHandler);
+        $('#canvas').on('mousemove', mouseMoveHandler);
+        $(window).on('keydown', keyHandler);
+        $(window).on('resize', resizeGame);
+
+        initGame();
+    }
+
+    function initGame() {
+
+        youwon = false;
+
+        btnState = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ];
+
+        highlightState = 0;
+
+        // Highlight location. Set to -1 to not render a highlight.
+        hx = -1;
+        hy = -1;
+    
+        // Selected cell. -1 for none.
+        sx = -1;
+        sy = -1;
 
         let b = Math.floor(Math.random() * baseBoards.length);
         board = baseBoards[b];
@@ -185,24 +222,12 @@ $(function () {
             }
         }
 
-        loadImages(); // Set source path
-
         // Init trackers
         for (let i = 0; i < 81; i++) {
             error[i] = false;
             locked[i] = false;
         }
-
-        resizeGame();
-
-        setInterval(update, 40);
-        drawScreen();
-        checkBoard(false);
-
-        $('#canvas').on('click', clickHandler);
-        $('#canvas').on('mousemove', mouseMoveHandler);
-        $(window).on('keydown', keyHandler);
-        $(window).on('resize', resizeGame);
+        checkHist();
     }
 
     function resizeGame(e) {
@@ -225,6 +250,9 @@ $(function () {
     }
 
     function keyHandler(e) {
+        if (freshload) return;
+        if (youwon) return;
+
         if (e.keyCode == 81) { // Q for debug-dump-puzzle
             console.log(board.join(''));
         }
@@ -284,6 +312,15 @@ $(function () {
     }
 
     function clickHandler(e) {
+        if (freshload) {
+            freshload = false;
+            return;
+        }
+        if (youwon) {
+            youwon = false;
+            initGame();
+            return;
+        }
         let mx = (e.offsetX - screenOffsetX) / gscale;
         let my = (e.offsetY - screenOffsetY) / gscale;
 
@@ -375,6 +412,7 @@ $(function () {
 
     function checkBoard(remove) {
         if (checkForWin()) {
+            youwon = true;
             console.log("You win!");
         }
         checkHist();
@@ -424,6 +462,7 @@ $(function () {
     }
 
     function mouseMoveHandler(e) {
+        if (freshload) return;
         clearButtonStates(false);
         let mx = (e.offsetX - screenOffsetX) / gscale;
         let my = (e.offsetY - screenOffsetY) / gscale;
@@ -454,15 +493,29 @@ $(function () {
 
     function update(e) {
         updateAlpha();
-
     }
 
     function drawScreen() {
         // BG
-        srcctx.clearRect(0, 0, 800, 600);
-        srcctx.fillStyle = "darkgray";
-        srcctx.fillRect(0, 0, 800, 600);
+        //srcctx.clearRect(0, 0, 800, 600);
+        //srcctx.fillStyle = "darkgray";
+        //srcctx.fillRect(0, 0, 800, 600);
+        srcctx.translate(400, 300);
+        srcctx.scale(1.1, 1.1);
+        srcctx.rotate(rot);
+        rot += 0.001;
+        srcctx.globalAlpha = 0.1;
+        srcctx.filter = "blur(8px) hue-rotate(10deg)";
+        srcctx.drawImage(dstCanvas, screenOffsetX, screenOffsetY, newGameWidth, newGameHeight, -400, -300, 800, 600);
+        srcctx.filter = "none";
+        srcctx.globalAlpha = 1;
+        srcctx.setTransform();
+        // srcctx.scale(1/1.1, 1/1.1);
+        // srcctx.rotate(-1);
 
+        if (youwon || freshload) {
+            srcctx.filter = "blur(8px)";
+        }
         // Grid
         srcctx.drawImage(gridImg, 0, 0, 600, 600);
 
@@ -501,6 +554,13 @@ $(function () {
             srcctx.globalAlpha = alpha;
             srcctx.drawImage(numbersImg, 0, 0, 60, 60, hx, hy, 60, 60);
             srcctx.globalAlpha = 1;
+        }
+        if (youwon) {
+            srcctx.filter = "none";
+            srcctx.drawImage(winImg, 200, 150);
+        } else if (freshload) {
+            srcctx.filter = "none";
+            srcctx.drawImage(titleImg, 200, 150);
         }
 
         // numbersImg[0] = highlight
@@ -698,6 +758,18 @@ $(function () {
             imgReady.numbers = true;
         }, false);
         buttonImg.src = 'res/buttons.png';
+
+        winImg = new Image(); // Create new img element
+        winImg.addEventListener('load', function () {
+            imgReady.youwin = true;
+        }, false);
+        winImg.src = 'res/youwin.png';
+
+        titleImg = new Image();
+        titleImg.addEventListener('load', function () {
+            imgReady.title = true;
+        }, false);
+        titleImg.src = 'res/title.png';
     }
 
     function updateAlpha() {
@@ -779,5 +851,5 @@ $(function () {
         }
     }
 
-    initGame();
+    firstInit();
 });
