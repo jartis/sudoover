@@ -1,7 +1,13 @@
 $(function () {
 
     // Drawing contexts
-    var ctx = document.getElementById('canvas').getContext('2d');
+    var srcCanvas;
+    var dstCanvas;
+    var srcctx;
+    var dstctx;
+    var newGameWidth;
+    var newGameHeight;
+    const dscale = 4/3;
 
     let board = [];
 
@@ -136,6 +142,10 @@ $(function () {
     var alphacounter = 0;
     var alphamod = 1;
 
+    var screenOffsetX = 0;
+    var screenOffsetY = 0;
+    let gscale = 1;
+
     var imgReady = {
         grid: false,
         numbers: false,
@@ -148,6 +158,18 @@ $(function () {
     };
 
     function initGame() {
+
+        // Set up canvaseses
+        dstCanvas = document.getElementById('canvas');
+        dstctx = dstCanvas.getContext('2d');
+        dstctx.canvas.width = window.innerWidth;
+        dstctx.canvas.height = window.innerHeight;
+        srcCanvas = document.createElement('canvas');
+        srcCanvas.width = 800;
+        srcCanvas.height = 800;
+        srcctx = srcCanvas.getContext('2d');
+
+
         let b = Math.floor(Math.random() * baseBoards.length);
         board = baseBoards[b];
 
@@ -171,6 +193,8 @@ $(function () {
             locked[i] = false;
         }
 
+        resizeGame();
+
         setInterval(update, 40);
         drawScreen();
         checkBoard(false);
@@ -178,6 +202,26 @@ $(function () {
         $('#canvas').on('click', clickHandler);
         $('#canvas').on('mousemove', mouseMoveHandler);
         $(window).on('keydown', keyHandler);
+        $(window).on('resize', resizeGame);
+    }
+
+    function resizeGame (e) {
+        dstCanvas.width = window.innerWidth;
+        dstCanvas.height = window.innerHeight;
+
+        if (dstCanvas.width / dstCanvas.height > dscale) {
+            newGameHeight = dstCanvas.height;
+            newGameWidth = (newGameHeight / 3) * 4;
+            gscale = newGameHeight / 600;
+        } else {
+            newGameWidth = dstCanvas.width;
+            newGameHeight = (newGameWidth / 4) * 3;
+            gscale = newGameWidth / 800;
+        }
+
+        screenOffsetX = Math.abs((dstCanvas.width - newGameWidth)) / 2;
+        screenOffsetY = Math.abs((dstCanvas.height - newGameHeight)) / 2;
+
     }
 
     function keyHandler(e) {
@@ -240,8 +284,8 @@ $(function () {
     }
 
     function clickHandler(e) {
-        let mx = e.offsetX;
-        let my = e.offsetY;
+        let mx = (e.offsetX - screenOffsetX) / gscale;
+        let my = (e.offsetY - screenOffsetY) / gscale;
 
         // Check for the number grid first
         if (mx < 570 && my < 570 & mx > 30 & my > 30) {
@@ -381,8 +425,8 @@ $(function () {
 
     function mouseMoveHandler(e) {
         clearButtonStates(false);
-        let mx = e.offsetX;
-        let my = e.offsetY;
+        let mx = (e.offsetX - screenOffsetX) / gscale;
+        let my = (e.offsetY - screenOffsetY) / gscale;
         if (mx > 585 && mx < 795 && my > 300 && my < 510) {
             if (((Math.floor(mx - 585) % 70) < 60) && // Gross math to check if we're actually inside a button since they are spaced
                 ((Math.floor(my - 300) % 70) < 60)) {
@@ -415,12 +459,12 @@ $(function () {
 
     function drawScreen() {
         // BG
-        ctx.clearRect(0, 0, 800, 600);
-        ctx.fillStyle = "darkgray";
-        ctx.fillRect(0, 0, 800, 600);
+        srcctx.clearRect(0, 0, 800, 600);
+        srcctx.fillStyle = "darkgray";
+        srcctx.fillRect(0, 0, 800, 600);
 
         // Grid
-        ctx.drawImage(gridImg, 0, 0, 600, 600);
+        srcctx.drawImage(gridImg, 0, 0, 600, 600);
 
         // Locks, Numbers, Errors (in that order)
         for (let y = 0; y < 9; y++) {
@@ -428,11 +472,11 @@ $(function () {
                 let cell = (9 * y) + x;
                 if (board[cell] > 0) {
                     if (locked[cell]) {
-                        ctx.drawImage(numbersImg, 600, 0, 60, 60, 30 + (60 * x), 30 + (60 * y), 60, 60);
+                        srcctx.drawImage(numbersImg, 600, 0, 60, 60, 30 + (60 * x), 30 + (60 * y), 60, 60);
                     }
-                    ctx.drawImage(numbersImg, 60 * board[cell], isOrig[cell] ? 180 : 0, 60, 60, 30 + (60 * x), 30 + (60 * y), 60, 60);
+                    srcctx.drawImage(numbersImg, 60 * board[cell], isOrig[cell] ? 180 : 0, 60, 60, 30 + (60 * x), 30 + (60 * y), 60, 60);
                     if (showErrors && error[cell]) {
-                        ctx.drawImage(numbersImg, 660, 0, 60, 60, 30 + (60 * x), 30 + (60 * y), 60, 60);
+                        srcctx.drawImage(numbersImg, 660, 0, 60, 60, 30 + (60 * x), 30 + (60 * y), 60, 60);
                     }
                 }
             }
@@ -445,23 +489,29 @@ $(function () {
             let bsrcy = 60 * btnState[num];
             let srcx = 60 + (60 * num) + (120 * (Math.floor(num / 9)));
             let hsrcx = (60 * (9 - histo[num]));
-            ctx.drawImage(buttonImg, 0, bsrcy, 60, 60, tx, ty, 60, 60);
-            ctx.drawImage(numbersImg, srcx, (60 * (Math.floor(btnState[num] / 3))), 60, 60, tx + 5, ty + 2, 50, 50);
+            srcctx.drawImage(buttonImg, 0, bsrcy, 60, 60, tx, ty, 60, 60);
+            srcctx.drawImage(numbersImg, srcx, (60 * (Math.floor(btnState[num] / 3))), 60, 60, tx + 5, ty + 2, 50, 50);
             if (num < 9 && histo[num] < 9) {
-                ctx.drawImage(numbersImg, hsrcx, 120, 60, 60, tx, ty, 60, 60);
+                srcctx.drawImage(numbersImg, hsrcx, 120, 60, 60, tx, ty, 60, 60);
             }
         }
 
         // Highlight
         if (hx >= 0 && hy >= 0) {
-            ctx.globalAlpha = alpha;
-            ctx.drawImage(numbersImg, 0, 0, 60, 60, hx, hy, 60, 60);
-            ctx.globalAlpha = 1;
+            srcctx.globalAlpha = alpha;
+            srcctx.drawImage(numbersImg, 0, 0, 60, 60, hx, hy, 60, 60);
+            srcctx.globalAlpha = 1;
         }
 
         // numbersImg[0] = highlight
         // numbersImg[10] = lock
         // numbersImg[11] = rong
+
+        // Scale to the big one!
+        dstctx.clearRect(0,0,dstCanvas.width,dstCanvas.height);
+
+        dstctx.drawImage(srcCanvas, 0, 0, 800, 600, screenOffsetX, screenOffsetY, newGameWidth, newGameHeight);
+
         window.requestAnimationFrame(drawScreen);
     }
 
@@ -729,5 +779,4 @@ $(function () {
     }
 
     initGame();
-
 });
