@@ -505,7 +505,7 @@ $(function () {
         srcctx.rotate(rot);
         rot += 0.001;
         srcctx.globalAlpha = 0.1;
-        srcctx.filter = "blur(8px) hue-rotate(10deg)";
+        srcctx.filter = "blur(8px) hue-rotate(30deg)";
         srcctx.drawImage(dstCanvas, screenOffsetX, screenOffsetY, newGameWidth, newGameHeight, -400, -300, 800, 600);
         srcctx.filter = "none";
         srcctx.globalAlpha = 1;
